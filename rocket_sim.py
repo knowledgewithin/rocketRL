@@ -23,6 +23,7 @@ class Simulator:
         return self.s.py <=0
 
     def take_action(self, gimble_angle, thrust_proportion, fin_angle):
+        # TODO: decide allowed values
         CoM, MoI = self.get_mass_vars()
         fin_forward, fin_ang_acc = self.get_fin_forces(fin_angle, CoM, MoI)
 

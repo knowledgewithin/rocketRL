@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+import numpy as np
 
 @dataclass
 class Rocket:
@@ -14,12 +15,18 @@ class Rocket:
     def __post_init__(self):
         self.rocket_CoM = self.height * .5 * self.dry_mass
 
+    def state(self):
+        return
+
 @dataclass
 class State:
-    px: float = 0                       # x position of rocket
+    px: float = np.random.randint(-10, 10)                       # x position of rocket
     py: float = 1000                    # y position of rocket
     vx: float = 0                       # x velocity of rocket
     vy: float = 0                       # y velocity of rocket
     v_angular: float = 0                # angular velocity of rocket
     orientation_angle: float = 0        # orientation angle of rocket
     fuel_level: float = 0               # current fuel level (mass) in kg
+
+    def __array__(self):
+        return np.array([self.px, self.py, self.vx, self.vy, self.v_angular, self.orientation_angle, self.fuel_level], dtype=np.float32)
