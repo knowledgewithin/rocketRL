@@ -1,4 +1,5 @@
 import torch
+import numpy as np
 from torch import nn
 
 
@@ -17,7 +18,6 @@ class Actor(nn.Module):
         self.softplus = nn.Softplus()
 
     def forward(self, x):
-        # TODO: clip mu/sigma if greater than what is allowed by sim
         x = self.layers(x)
         mu = self.mu(x)
         sigma = self.sigma(x)
@@ -25,8 +25,8 @@ class Actor(nn.Module):
 
         norm_dist = torch.distributions.normal.Normal(mu, sigma)
         action = norm_dist.sample()
-        print(action)
-        action = torch.clamp(action, min=torch.Tensor([-15, 0, -15]), max=torch.Tensor([15, 100, 15]))
+        # print(action)
+        action = torch.clamp(action, min=torch.Tensor([-np.pi/18, 0, -np.pi/18]), max=torch.Tensor([np.pi/18, 1, np.pi/18]))
         return action, norm_dist
 
 

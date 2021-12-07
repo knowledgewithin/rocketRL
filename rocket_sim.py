@@ -2,7 +2,7 @@ from data_classes import Rocket, State
 import numpy as np
 
 class Simulator:
-    def __init__(self, rocket = None, state = None, dt = 1, g = -9.81):
+    def __init__(self, rocket = None, state = None, dt = .05, g = -9.81):
         self.dt = dt
         self.rocket = rocket if rocket else Rocket()
         self.s = state if state else State(fuel_level=self.rocket.start_fuel_mass)
@@ -105,7 +105,15 @@ class Simulator:
         self.s.vx += d_vx
         self.s.vy += d_vy
 
-    def get_reward(self):
+    def get_final_reward(self):
         return self.v_penalty*self.total_v() \
                + self.x_penalty*self.s.px \
                + self.angle_penalty*np.abs(self.s.orientation_angle)
+
+    def get_state_reward(self):
+        return self.v_penalty*self.total_v() * (self.s.py<10) \
+               + self.x_penalty*self.s.px \
+               + self.angle_penalty*np.abs(self.s.orientation_angle)
+
+    def generate_image(self):
+        pass

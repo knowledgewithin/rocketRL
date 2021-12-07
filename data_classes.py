@@ -10,7 +10,7 @@ class Rocket:
     dry_mass: float = 100000            # wight of rocket without fuel in kg
     start_fuel_mass: float = 100000     # starting fuel mass in kg
     full_thrust: float = 7000000        # thrust in newtons if thrust is at 100%
-    burn_rate: float = 20000          # burn rate in KG/s of 100% thrust
+    burn_rate: float = 5000             # burn rate in KG/s of 100% thrust
 
     def __post_init__(self):
         self.rocket_CoM = self.height * .5 * self.dry_mass
@@ -20,13 +20,15 @@ class Rocket:
 
 @dataclass
 class State:
-    px: float = np.random.randint(-10, 10)                       # x position of rocket
-    py: float = 1000                    # y position of rocket
-    vx: float = 0                       # x velocity of rocket
-    vy: float = 0                       # y velocity of rocket
-    v_angular: float = 0                # angular velocity of rocket
-    orientation_angle: float = 0        # orientation angle of rocket
-    fuel_level: float = 0               # current fuel level (mass) in kg
+    px: float = np.random.randint(-10, 10)                      # x position of rocket
+    py: float = 1000                                            # y position of rocket
+    # vx: float = np.random.randint(-5, 5)                        # x velocity of rocket (throw the rocket?)
+    vx: float = 0                                               # x velocity of rocket (throw the rocket?)
+    # vy: float = np.random.randint(-10, 0)                       # y velocity of rocket
+    vy: float = 0                                               # y velocity of rocket
+    v_angular: float = 0                                        # angular velocity of rocket
+    orientation_angle: float = 0                                # orientation angle of rocket
+    fuel_level: float = 20000                                   # current fuel level (mass) in kg
 
     def __array__(self):
         return np.array([self.px, self.py, self.vx, self.vy, self.v_angular, self.orientation_angle, self.fuel_level], dtype=np.float32)
