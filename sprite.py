@@ -1,22 +1,16 @@
+import time
+
 import pygame
 import random
 import numpy as np
-
-# Define some colors
-BLACK = (0, 0, 0)
-WHITE = (255, 255, 255)
-RED = (255, 0, 0)
-GRAY = (200, 200, 200)
-
-
-
-
-#hyperparams
 from data_classes import Rocket, State
 from rocket_sim import Simulator
 
+GRAY = (200, 200, 200)
+WHITE = (255, 255, 255)
 
 class Block(pygame.sprite.Sprite):
+    ''' a block sprite, used to represent the ground '''
     def __init__(self, color, width, height):
         super().__init__()
         self.image = pygame.Surface([width, height])
@@ -24,13 +18,12 @@ class Block(pygame.sprite.Sprite):
         self.rect = self.image.get_rect()
 
 class RocketOb(pygame.sprite.Sprite):
-    def __init__(self, color, width=20, height=100):
+    ''' a rocket sprite '''
+    def __init__(self):
         super().__init__()
-        # self.image = pygame.Surface([width, height])
         self.orig_image = pygame.image.load("rocket.png").convert()
         self.orig_image = pygame.transform.scale(self.orig_image, (40, 40))
         self.image = self.orig_image
-        # self.image.fill(color)
         self.rect = self.image.get_rect()
 
     def rot_center(self, angle, x, y):
@@ -46,7 +39,10 @@ class RocketOb(pygame.sprite.Sprite):
 
 
 def run_vis(rocket, initial_state, dt = .05, g = -9.81, action_hist=None):
+    ''' Runs a visualization for a saved eposode '''
     sim = Simulator(rocket=rocket, state=initial_state, dt=dt, g=g)
+    state = sim.get_state()
+
     # Initialize Pygame
     scale = 5
     pygame.init()
@@ -54,18 +50,17 @@ def run_vis(rocket, initial_state, dt = .05, g = -9.81, action_hist=None):
     screen_height = 800
     ground_y = screen_height-(100/scale)
     screen = pygame.display.set_mode([screen_width, screen_height])
-
     all_sprites_list = pygame.sprite.Group()
 
-    state = sim.get_state()
-
+    # initialize rocket object
     rocket_w = 20
     rocket_h = 100
-    rob = RocketOb(BLACK, rocket_w, rocket_h)
+    rob = RocketOb()
     rob.rect.x = state.px + screen_width/2
     rob.rect.y = screen_height - state.py/2
     all_sprites_list.add(rob)
 
+    # initialize ground
     ground = Block(GRAY, screen_width, ground_y)
     ground.rect.x = 0
     ground.rect.y = ground_y
@@ -87,6 +82,7 @@ def run_vis(rocket, initial_state, dt = .05, g = -9.81, action_hist=None):
         if not finished:
             br = True
             while br:
+                time.sleep(5)
                 for event in pygame.event.get():
                     if event.type == pygame.MOUSEBUTTONDOWN:
                         br=False
@@ -94,24 +90,12 @@ def run_vis(rocket, initial_state, dt = .05, g = -9.81, action_hist=None):
                 for event in pygame.event.get():
                     if event.type == pygame.QUIT:
                         done = True
-                # thrust = random.random()
-                # # thrust = 1
-                # # thrust = 0
-                # gimble = random.random()*np.pi/18-np.pi/36
-                # # gimble = np.pi/360
-                # gimble = 0
-                # fins = random.random()*np.pi/2-np.pi/4
-                # # fins = np.pi/4
-                # print(thrust)
 
-                # print(thrust, gimble, fins)
                 sim.take_action(thrust, gimble, fins)
 
                 x = state.px/scale + screen_width/2 - rocket_w/2
                 y = ground_y - (rocket_h +state.py)/scale
-                # print(state.orientation_angle, x, y)
                 rob.rot_center(-1*state.orientation_angle, x, y)
-                # print(state.px,state.py, state.orientation_angle)
 
                 # Clear the screen
                 screen.fill(WHITE)
@@ -119,12 +103,12 @@ def run_vis(rocket, initial_state, dt = .05, g = -9.81, action_hist=None):
                 pygame.display.flip()
 
                 # Limit to 60 frames per second
-                # clock.tick(60)
+                clock.tick(60)
             finished = True
 
     pygame.quit()
 
-
+# testing
 if __name__ == "__main__":
     dt=.2
     rocket = Rocket()

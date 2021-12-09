@@ -4,13 +4,14 @@ from data_classes import Rocket, State
 import numpy as np
 
 class Simulator:
+    ''' A physics simulator for flying a rocket '''
     def __init__(self, rocket = None, state = None, dt = .05, g = -9.81):
         self.dt = dt
         self.rocket = rocket if rocket else Rocket()
         self.s = state if state else State()
         self.g = g
 
-        # rewards
+        # Penalty factors for the final state of each of (velocity, position, angle, and time)
         self.v_penalty = -1
         self.x_penalty = -1
         self.angle_penalty = -10    # its in radians...
@@ -38,14 +39,11 @@ class Simulator:
         return self.s.py <=0
 
     def take_action(self, thrust_proportion, gimble_angle=0, fin_angle=0):
-        # if(self.s.py < 20): print("Action: gimble",gimble_angle, "thrust prop:", thrust_proportion, "fin angle:",fin_angle)
-        # print("Action: gimble",gimble_angle, "thrust prop:", thrust_proportion, "fin angle:",fin_angle)
-        # print("State", self.s)
-        # TODO: decide allowed values
+        ''' Take an action, consisting of a thrust proportion, a gimble angle of the engine, and a fin angle for the fins on the head of the rocket. '''
+
+        # Calculate center of mass and moment of inertia
         CoM, MoI = self.get_mass_vars()
         fin_forward, fin_ang_acc = self.get_fin_forces(fin_angle, CoM, MoI)
-        # if(self.s.py < 20): print("fin forces:",fin_forward/(self.s.fuel_level + self.rocket.dry_mass), fin_ang_acc)
-        # print("fin forces:",fin_forward/(self.s.fuel_level + self.rocket.dry_mass), fin_ang_acc)
 
         # Check if we have enough fuel to burn the requested about, and calculate the amount of resulting thrust
         if self.s.fuel_level > 0:
@@ -61,15 +59,14 @@ class Simulator:
         else:
             thrust_forward, thrust_ang_acc = 0, 0
 
-        # if(self.s.py < 20): print("thrust forces:",thrust_forward/(self.s.fuel_level + self.rocket.dry_mass), thrust_ang_acc)
-        # print("thrust forces:",thrust_forward/(self.s.fuel_level + self.rocket.dry_mass), thrust_ang_acc)
+        # Calculate thrust variables, and update position and velocity
         total_thrust_forward = thrust_forward + fin_forward
         total_ang_acc = thrust_ang_acc + fin_ang_acc
         self.update_p_and_v(total_thrust_forward, total_ang_acc)
         self.s.t += self.dt
 
     def get_mass_vars(self):
-        # Calculate mass, center of mass, and moment of inertia
+        ''' Calculate center of mass, and moment of inertia for the rocket, based on the current fuel level '''
         mass = self.s.fuel_level + self.rocket.dry_mass
         fuel_height = (self.s.fuel_level / self.rocket.start_fuel_mass) * self.rocket.fuel_height_prop * self.rocket.height
         fuel_CoM = fuel_height * .5 * self.s.fuel_level
@@ -81,17 +78,16 @@ class Simulator:
         return total_CoM, total_MoI
 
     def get_MoI(self, mass, c, h):
+        ''' Moment of inertia formula '''
         if h==0: return 0
         return mass / (3 * h) * (h ** 3 + 3 * h * c ** 2 - 3 * h ** 2 * c)
 
     def get_fin_forces(self, fin_angle, CoM, MoI):
-        # TODO: This will depend on angular velocity also
+        ''' Get the forces on the rocket from the air resistance over the fins '''
         v_angle = np.arctan2(self.s.vx, 0) if self.s.vy == 0 else np.arctan(self.s.vx/self.s.vy)
         fin_v_angle = self.s.orientation_angle + fin_angle - v_angle
-        # print("angles", self.s.orientation_angle, fin_angle, v_angle, fin_v_angle)
 
         f_fin = -1*(np.sin(fin_v_angle) * self.total_v()) ** 2 * self.rocket.fin_drag
-        # print("f fin",f_fin)
         fin_forward = np.abs(np.sin(fin_angle)) * f_fin
         fin_lever_arm = self.rocket.height - self.rocket.fin_offset - CoM
         fin_torque = np.cos(fin_angle) * f_fin * fin_lever_arm
@@ -106,17 +102,16 @@ class Simulator:
         return np.sqrt(self.s.px ** 2 + self.s.py ** 2)
 
     def get_thrust_forces(self, thrust_proportion, gimble_angle, CoM, MoI):
+        ''' Calculate the forces from the thrust and gimpling actions '''
         thrust = self.rocket.full_thrust * thrust_proportion
         thrust_forward = np.cos(gimble_angle) * thrust
         thrust_torque = np.sin(gimble_angle) * thrust * CoM
         thrust_ang_acc = thrust_torque / MoI
-        # if(self.s.py < 20): print("thrust forward:",thrust_forward, "thrust torque", thrust_torque)
 
         return thrust_forward, thrust_ang_acc
 
     def update_p_and_v(self, thrust_forward, ang_acc):
-        # TODO: handle end case, where the ground is hit.  Only some of the acceleration will happen before impact.
-        # TODO: angular velocity will also affect this, as over dt the rotation will cause a curve in thrust
+        ''' update position and velocity states '''
         mass = self.s.fuel_level + self.rocket.dry_mass
         total_thrust_x = np.sin(self.s.orientation_angle) * thrust_forward
         total_thrust_y = np.cos(self.s.orientation_angle) * thrust_forward
@@ -124,9 +119,6 @@ class Simulator:
         d_v_angular = ang_acc * self.dt
         d_vx = total_thrust_x / mass * self.dt
         d_vy = (self.g + total_thrust_y / mass) * self.dt
-
-        # print("orientation ang:",self.s.orientation_angle, "total thrust x:",total_thrust_x / mass, "total thrust y:",total_thrust_y / mass,"v change x:",d_vx, "v change y:",d_vy,"change ang:",d_v_angular)
-        # if(self.s.py < 20): print("orientation ang:",self.s.orientation_angle, "total thrust x:",total_thrust_x / mass, "total thrust y:",total_thrust_y / mass,"v change x:",d_vx, "v change y:",d_vy,"change ang:",d_v_angular)
 
         # Assuming that changes in vx, vy, and v_angular happen smoothly, the average vs over dt will be halfway between the old v and the new v
         self.s.orientation_angle += (self.s.v_angular + d_v_angular / 2) * self.dt
@@ -138,25 +130,20 @@ class Simulator:
         self.s.vy += d_vy
 
     def get_final_reward(self):
+        ''' Get the final reward for an episode '''
         return 1000 \
                + self.v_penalty*self.total_v() \
                + self.x_penalty*self.total_p() \
                + self.angle_penalty*np.abs(self.s.orientation_angle) \
                + self.t_penalty*self.s.t
-        # return max(0,r)
 
     def get_state_reward(self):
+        ''' get the reward for a single state.  If the state is a final state, use a multiple of the final reward function, otherwise use the state reward. '''
         if self.final_state_reached():
             final_r = self.get_final_reward()*20
-            # print("final_r",final_r)
             return final_r
         else:
             r =  1000 \
                + self.x_penalty*self.total_p() \
                + self.angle_penalty*np.abs(self.s.orientation_angle)
-            # if self.s.py < 50:
-            #     print("py",self.s.py, "r",r)
             return r
-
-    def generate_image(self):
-        pass

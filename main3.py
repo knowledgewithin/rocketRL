@@ -1,6 +1,5 @@
 from data_classes import Rocket, State
 from rocket_sim import Simulator
-from model import Model
 from actorcritic import Actor, Critic
 import numpy as np
 import torch
@@ -10,7 +9,6 @@ from sprite import run_vis
 epochs = 5000
 dt = .1
 gamma = 0.95
-
 rocket = Rocket()
 
 actor = Actor()

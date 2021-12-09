@@ -3,6 +3,7 @@ import numpy as np
 
 @dataclass
 class Rocket:
+    ''' A rocket class, containing properties used in the physics simulation '''
     height: float = 50                  # height of the rocket in meters
     fin_offset: float = 3               # how far below the nose are the fins
     fuel_height_prop: float = .5        # What proportion of the rocket is the fuel tank
@@ -20,16 +21,14 @@ class Rocket:
 
 @dataclass
 class State:
+    ''' A state of a rocket, initialized with some randome selections '''
     px: float = np.random.randint(-100, 100)                      # x position of rocket
-    # px: float = 0                      # x position of rocket
-    py: float = 1000                                            # y position of rocket
-    vx: float = np.random.randint(-10, 10)                        # x velocity of rocket (throw the rocket?)
-    # vx: float = 0                                               # x velocity of rocket (throw the rocket?)
-    vy: float = np.random.randint(-10, 0)                       # y velocity of rocket
-    # vy: float = 0                                               # y velocity of rocket
-    v_angular: float = 0                                        # angular velocity of rocket
-    orientation_angle: float = 0                                # orientation angle of rocket
-    fuel_level: float = 100000                                   # current fuel level (mass) in kg
+    py: float = 1000                                              # y position of rocket
+    vx: float = np.random.randint(-10, 10)                        # x velocity of rocket
+    vy: float = np.random.randint(-10, 0)                         # y velocity of rocket
+    v_angular: float = 0                                          # angular velocity of rocket
+    orientation_angle: float = 0                                  # orientation angle of rocket
+    fuel_level: float = 100000                                    # current fuel level (mass) in kg
     t: float = 0
 
     def __array__(self):

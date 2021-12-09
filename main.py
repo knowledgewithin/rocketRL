@@ -1,63 +1,51 @@
 from data_classes import Rocket, State
 from rocket_sim import Simulator
-from model import Model
 from actorcritic import Actor, Critic
 import numpy as np
 import torch
 from tqdm import tqdm
 
-def train_online_step(sim, actor, optim_actor, critic, optim_critic, critic_loss, gamma=.9, do_print=False):
-    if do_print: print()
+from sprite import run_vis
+
+
+def train_online_step(sim, actor, optim_actor, critic, optim_critic, critic_loss, gamma=.9):
 
     # actor takes an action
     state = torch.tensor(np.array(sim.get_state()))
     action, norm_dist = actor(state)
-    # print('action: ', action)
-    if do_print: print('action: ', action)
     sim.take_action(*action.detach().numpy())
     next_state = torch.tensor(np.array(sim.get_state()))
-    # states.append(next_state)
 
+    # get reward
     reward = sim.get_state_reward()
-    if do_print: print('resulting state:', next_state)
 
     # critic predicts value of next state
     value_Sprime = critic(next_state)
-    if do_print: print('V(t+1):', value_Sprime)
     target = reward + gamma * value_Sprime.squeeze()
-    if do_print: print('target:', target)
 
     # TD error
     value_S = critic(state)
     td_error = target - value_S.squeeze()
 
-    # might need to change where clipping occurs, loss is massive at the moment
-    # actor_loss = -norm_dist.log_prob(action).sum() * td_error
+    # losses
     actor_loss = -torch.mean(norm_dist.log_prob(action) * td_error)
-    # actor_loss = actor_loss(td_error)
-    # if sim.s.py < 50:
-    #     print("actor loss",actor_loss, "td error", td_error)
-    # actor_loss = -norm_dist.log_prob(action).sum() * target if norm_dist else -1*target
-    if do_print: print("td_error", td_error)
-    if do_print: print("actor loss", actor_loss)
     optim_actor.zero_grad()
     actor_loss.backward(retain_graph=True)
     optim_actor.step()
 
-    # critic_loss = torch.mean((td_error) ** 2)
     critic_loss = critic_loss(value_S, target)
     optim_critic.zero_grad()
     critic_loss.backward()
     optim_critic.step()
-    return reward
+    return action, reward
 
-epochs = 5000
-rocket = Rocket()
-model = Model()
-t = 0
-dt = .1
+
 
 #hyperparams
+epochs = 50000
+rocket = Rocket()
+t = 0
+dt = .1
 gamma = 0.95
 
 actor = Actor()
@@ -71,18 +59,15 @@ last_rewards = []
 last_epoch_rewards = []
 for i in pbar:
     sim = Simulator(rocket=rocket, dt=dt)
+    initial_state = sim.copy_state()
     reward_total = 0
-    # states = []
-    # last_state = sim.get_state()
-    # last_value = critic(torch.tensor(np.array(next_state)))
-    do_print = i>=epochs-2
-    if do_print:
-        print()
-        print(f"-------------EPOCH {i}----------------")
     epoch_reward = 0
     t = 0
+    action_hist = []
     while not sim.final_state_reached():
-        epoch_reward += train_online_step(sim, actor, optim_actor, critic, optim_critic, critic_loss, gamma=gamma, do_print=do_print)
+        action, epoch_reward_i = train_online_step(sim, actor, optim_actor, critic, optim_critic, critic_loss, gamma=gamma)
+        action_hist.append(action)
+        epoch_reward += epoch_reward_i
         t += dt
 
     reward = sim.get_final_reward()
@@ -94,14 +79,4 @@ for i in pbar:
     pbar.set_description(f"(t: {t}, r: {int(reward)}, avg: {int(np.average(last_rewards))}), (ep r: {int(epoch_reward)}, avg: {int(np.average(last_epoch_rewards))}) "
                          + f": {sim.print_state()}")
 
-    if do_print:
-        print("Final Reward:", reward)
-    # assert False
-
-    # reward = sim.get_final_reward()
-    # #train critic for each state, using total reward
-    # for state in states:
-    #     critic_loss = torch.mean((target - value_S)**2)
-    #     optim_critic.zero_grad()
-    #     critic_loss.backward()
-    #     optim_critic.step()
+    if i!=0 and i>48000 and i%100==0: run_vis(rocket, initial_state=initial_state, dt=dt, action_hist=action_hist)
